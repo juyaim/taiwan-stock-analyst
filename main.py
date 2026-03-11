@@ -1,4 +1,4 @@
-# 台股分析師 - 全能數據庫 V4.0
+# 台股分析師 - 全能數據庫 V4.2
 # 小提示：只需修改下方的 "2330" 即可更換個股追蹤目標
 STOCK_ID = "2330" 
 
@@ -18,12 +18,13 @@ MARKET_SENTIMENT = {
 
 # --- 第三部分：個股深度分析 (精準穴位) ---
 STOCK_ANALYSIS = {
-    "1. 技術分析": f"https://www.wantgoo.com/stock/astock/techchart?stockno={STOCK_ID}",
-    "2. 籌碼追蹤(Goodinfo)": f"https://goodinfo.tw/tw/StockDirectorSharehold.asp?STOCK_ID={STOCK_ID}",
-    "3. 主力足跡(NLOG)": f"f'https://nlog.cc/s/{STOCK_ID}/籌碼分析'",
+    "1. 技術分析": f"https://www.wantgoo.comastock/techchart?stockno={STOCK_ID}",
+    "2. 籌碼追蹤(持股比例)": f"https://goodinfo.tw/tw/StockDirectorSharehold.asp?STOCK_ID={STOCK_ID}",
+    "3. 法人進出(三大法人)": f"https://goodinfo.tw{STOCK_ID}", # 修正網址路徑
     "4. 基本面(財報狗)": f"https://statementdog.com/analysis/{STOCK_ID}",
-    "5. 市場討論(Cmoney)": f"https://www.cmoney.tw/forum/stock/{STOCK_ID}",
-    "重點": "追蹤法人買賣超、毛利率趨勢與群眾情緒。"
+    "5. 分點買賣排行(找關鍵分點)": f"https://www.wantgoo.com{STOCK_ID}/major-investors/main-broker", # 修正網址路徑
+    "6. 市場討論(Cmoney)": f"https://www.cmoney.tw/forum/stock/{STOCK_ID}",
+    "重點": "追蹤法人買賣超、毛利率趨勢與群眾情緒；觀察法人是否連買，並找出是哪間券商分點在帶頭拉抬。"
 }
 
 # --- 第四部分：營收獲利 (績效成績單) ---
@@ -33,8 +34,13 @@ EARNINGS_REPORT = {
 }
 
 def start_integrated_analysis():
-    print(f"--- 全能台股導航 V4.0 啟動 ---")
-    print(f"當前監控目標：{STOCK_ID}。系統已整合政府指標、大戶籌碼與個股基本面。")
+    print(f"--- 全能台股導航 V4.2 啟動 ---")
+    print(f"當前監控目標：{STOCK_ID}")
+    print("-" * 30)
+    print(f"法人進出追蹤：{STOCK_ANALYSIS['3. 法人進出(三大法人)']}")
+    print(f"關鍵分點查詢：{STOCK_ANALYSIS['5. 分點買賣排行(找關鍵分點)']}")
+    print("-" * 30)
+    print("提示：點擊上方連結即可查看最新的籌碼分佈。")
 
 if __name__ == "__main__":
     start_integrated_analysis()
