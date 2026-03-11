@@ -1,44 +1,45 @@
-# 台股分析師 - 全能數據庫 V4.5 
-# 新增功能：啟動後手動輸入股票代碼，自動生成券商分點與個人雲端連結
+# 台股分析師 - 全能數據庫 V4.6
+# 新增功能：將您的個人 GitHub Pages 分點統計網址直接與股票代碼連動
 
-import webbrowser # 用於自動開啟網頁(選配)
+import webbrowser
 
-# 您的個人雲端籌碼庫網址
-MY_DASHBOARD_BASE = "https://juyaim.github.io"
+# 您的個人雲端網站基礎路徑 (確保路徑正確避免 404)
+USER_BASE_URL = "https://juyaim.github.io"
 
 def start_integrated_analysis():
-    print("🚀 --- 全能台股導航 V4.5 啟動 --- 🚀")
+    print("🚀 --- 全能台股導航 V4.6 啟動 --- 🚀")
     
-    # --- 新增：動態輸入功能 ---
+    # 讓使用者輸入代碼
     target_stock = input("請輸入想查詢的股票代碼 (例如 2330): ").strip()
     if not target_stock:
-        target_stock = "2330" # 若未輸入則預設為台積電
+        target_stock = "2330"
         
     print(f"\n【目前監控目標】：{target_stock}")
     print("-" * 50)
 
-    # --- 第三部分：個股深度分析 (動態生成連結) ---
+    # --- 核心深度分析連結 ---
+    # 整合您的個人分點網頁與外部專業網站
     analysis_links = {
-        "1. 個人雲端籌碼圖": f"{MY_DASHBOARD_BASE}",
-        "2. 玩股網_券商分點排行": f"https://www.wantgoo.com{target_stock}/major-investors/broker-buysell",
-        "3. Goodinfo_分點進出明細": f"https://goodinfo.tw{target_stock}",
-        "4. 玩股網_主力動向(集中度)": f"https://www.wantgoo.com{target_stock}/major-investors/main-trend",
-        "5. 財報狗_基本面分析": f"https://statementdog.com{target_stock}"
+        "1. 您的雲端_三大法人趨勢": f"{USER_BASE_URL}/index.html", # 您的法人持股圖
+        "2. 您的雲端_券商分點統計": f"{USER_BASE_URL}/broker_stats.html", # 您的分點統計頁
+        "3. 玩股網_即時分點排行": f"https://www.wantgoo.com{target_stock}/major-investors/broker-buysell",
+        "4. Goodinfo_分點買賣明細": f"https://goodinfo.tw{target_stock}",
+        "5. 財報狗_獲利體質": f"https://statementdog.com{target_stock}"
     }
 
-    # 輸出連結
-    print(f"📈 [個人雲端] 籌碼走勢總覽： {analysis_links['1. 個人雲端籌碼圖']}")
-    print(f"🔍 [分點查詢] 玩股網排行：   {analysis_links['2. 玩股網_券商分點排行']}")
-    print(f"📋 [詳細明細] Goodinfo進出： {analysis_links['3. Goodinfo_分點進出明細']}")
-    print(f"🎯 [大戶動向] 主力集中度：   {analysis_links['4. 玩股網_主力動向(集中度)']}")
+    # 輸出連結清單
+    print(f"📈 [法人趨勢] 個人雲端圖表： {analysis_links['1. 您的雲端_三大法人趨勢']}")
+    print(f"📊 [分點統計] 個人雲端統計： {analysis_links['2. 您的雲端_券商分點統計']}")
+    print(f"🔍 [分點查詢] 玩股網即時排行：{analysis_links['3. 玩股網_即時分點排行']}")
+    print(f"📋 [詳細明細] Goodinfo進出：  {analysis_links['4. Goodinfo_分點買賣明細']}")
     print("-" * 50)
     
-    print(f"💡 操作提示：")
-    print(f"   1. 先點開「個人雲端圖」，在搜尋框輸入 {target_stock} 看法人大趨勢。")
-    print(f"   2. 若法人有大動作，再點「券商分點排行」看是哪間分點在買賣。")
+    print(f"💡 戰術建議：")
+    print(f"   1. 先看『個人雲端圖表』確認外資/投信是大買還是大賣。")
+    print(f"   2. 若有異常，再到『個人雲端分點統計』或玩股網，輸入 {target_stock} 抓出帶頭的主力券商。")
     
-    # 選配：自動打開最重要的分點網頁 (若不需要可註解掉)
-    # webbrowser.open(analysis_links['2. 玩股網_券商分點排行'])
+    # 若想自動開啟個人網站，可將下面這行取消註解
+    # webbrowser.open(analysis_links['2. 您的雲端_券商分點統計'])
 
 if __name__ == "__main__":
     start_integrated_analysis()
