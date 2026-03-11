@@ -1,45 +1,77 @@
-# 台股分析師 - 全能數據庫 V4.6
-# 新增功能：將您的個人 GitHub Pages 分點統計網址直接與股票代碼連動
+# ======================================================
+# 台股分析師 - 全能數據庫 V4.9 (宏觀 + 籌碼 + 分點 究極版)
+# ======================================================
+# 功能：宏觀環境、市場情緒、個人雲端圖表、分點統計、主力排行
+# 修復：解決 GitHub Pages 網址 404 路徑問題
 
 import webbrowser
 
-# 您的個人雲端網站基礎路徑 (確保路徑正確避免 404)
-USER_BASE_URL = "https://juyaim.github.io"
+# --- 基礎設定：您的個人雲端網站路徑 ---
+GITHUB_USER = "juyaim"
+REPO_NAME = "tw-institutional-stocker"
+BASE_URL = f"https://{GITHUB_USER}.github.io/{REPO_NAME}"
 
 def start_integrated_analysis():
-    print("🚀 --- 全能台股導航 V4.6 啟動 --- 🚀")
+    print("=" * 70)
+    print("🚀 --- 全能台股導航 V4.9 啟動 (宏觀/情緒/個股/分點) --- 🚀")
+    print("=" * 70)
     
     # 讓使用者輸入代碼
-    target_stock = input("請輸入想查詢的股票代碼 (例如 2330): ").strip()
+    target_stock = input("📌 請輸入想查詢的股票代碼 (直接按 Enter 預設 2330): ").strip()
     if not target_stock:
         target_stock = "2330"
         
-    print(f"\n【目前監控目標】：{target_stock}")
-    print("-" * 50)
+    print(f"\n【📡 當前監控目標：{target_stock} 】")
+    print("-" * 70)
 
-    # --- 核心深度分析連結 ---
-    # 整合您的個人分點網頁與外部專業網站
-    analysis_links = {
-        "1. 您的雲端_三大法人趨勢": f"{USER_BASE_URL}/index.html", # 您的法人持股圖
-        "2. 您的雲端_券商分點統計": f"{USER_BASE_URL}/broker_stats.html", # 您的分點統計頁
-        "3. 玩股網_即時分點排行": f"https://www.wantgoo.com{target_stock}/major-investors/broker-buysell",
-        "4. Goodinfo_分點買賣明細": f"https://goodinfo.tw{target_stock}",
-        "5. 財報狗_獲利體質": f"https://statementdog.com{target_stock}"
+    # --- 第一部分：宏觀環境與政府指標 (市場的氣血) ---
+    MACRO_INDICATORS = {
+        "1. 國發會_景氣燈號": "https://index.ndc.gov.tw/n/zh_tw",
+        "2. M平方_全球總經": "https://www.macromicro.me/trader-insights",
+        "💡 重點提醒": "藍燈買進(經濟感冒)、紅燈減碼(經濟發燒)。"
     }
 
-    # 輸出連結清單
-    print(f"📈 [法人趨勢] 個人雲端圖表： {analysis_links['1. 您的雲端_三大法人趨勢']}")
-    print(f"📊 [分點統計] 個人雲端統計： {analysis_links['2. 您的雲端_券商分點統計']}")
-    print(f"🔍 [分點查詢] 玩股網即時排行：{analysis_links['3. 玩股網_即時分點排行']}")
-    print(f"📋 [詳細明細] Goodinfo進出：  {analysis_links['4. Goodinfo_分點買賣明細']}")
-    print("-" * 50)
-    
-    print(f"💡 戰術建議：")
-    print(f"   1. 先看『個人雲端圖表』確認外資/投信是大買還是大賣。")
-    print(f"   2. 若有異常，再到『個人雲端分點統計』或玩股網，輸入 {target_stock} 抓出帶頭的主力券商。")
-    
-    # 若想自動開啟個人網站，可將下面這行取消註解
-    # webbrowser.open(analysis_links['2. 您的雲端_券商分點統計'])
+    # --- 第二部分：市場情緒與大戶底牌 (多空博弈) ---
+    MARKET_SENTIMENT = {
+        "1. 期交所_大戶未平倉": "https://www.taifex.com.tw/cht/index",
+        "2. 證交所_借券空單": "https://www.twse.com.tw/zh/page/trading/exchange/TWTASU.html",
+        "💡 重點提醒": "觀察大戶是否反向佈局，空單若暴增需警戒。"
+    }
+
+    # --- 第三部分：個股深度分析 (您的個人雲端 + 外部專業數據) ---
+    STOCK_ANALYSIS = {
+        "1. [個人雲端] 三大法人趨勢圖": f"{BASE_URL}/index.html",
+        "2. [個人雲端] 券商分點統計表": f"{BASE_URL}/broker_stats.html",
+        "3. [即時數據] 玩股網分點排行": f"https://www.wantgoo.com{target_stock}/major-investors/broker-buysell",
+        "4. [詳細明細] Goodinfo買賣明細": f"https://goodinfo.tw{target_stock}",
+        "5. [基本面] 財報狗體質分析": f"https://statementdog.com{target_stock}"
+    }
+
+    # --- 第四部分：營收獲利 (績效成績單) ---
+    EARNINGS_REPORT = {
+        "1. 公開資訊觀測站": "https://mops.twse.com.tw",
+        "💡 重點提醒": "每月 10 號前觀察營收成長率 (YoY/MoM)。"
+    }
+
+    # --- 輸出所有連結 ---
+    print("\n🌍 [第一部分] 宏觀環境：")
+    for k, v in MACRO_INDICATORS.items(): print(f"   {k}: {v}")
+
+    print("\n🎭 [第二部分] 市場情緒：")
+    for k, v in MARKET_SENTIMENT.items(): print(f"   {k}: {v}")
+
+    print("\n🔍 [第三部分] 個股與籌碼深度分析：")
+    for k, v in STOCK_ANALYSIS.items(): print(f"   {k}: {v}")
+
+    print("\n💰 [第四部分] 營收獲利：")
+    for k, v in EARNINGS_REPORT.items(): print(f"   {k}: {v}")
+
+    print("-" * 70)
+    print(f"💡 【作戰指南】")
+    print(f"   1. 先看「景氣燈號」確認大環境。")
+    print(f"   2. 打開連結『個人雲端圖表』，看法人是否正同步買進 {target_stock}。")
+    print(f"   3. 若有異常，到『個人雲端分點表』或『玩股網』抓出是哪家分點在搞鬼。")
+    print("-" * 70)
 
 if __name__ == "__main__":
     start_integrated_analysis()
