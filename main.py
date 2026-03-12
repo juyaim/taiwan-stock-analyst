@@ -1,51 +1,57 @@
 import datetime
 import yfinance as yf
 
-# --- 核心數據抓取：確保 2026 年報價必出與精準台股識別 ---
+# --- 核心數據抓取：V4.20 分鐘線精準偵測 (解決報價延遲與錯誤問題) ---
 def get_stock_data(sid):
     clean_id = "".join(filter(str.isdigit, sid))
-    # 優先嘗試 .TW (上市) 與 .TWO (上櫃)，解決 3131 等代號重複問題
+    # 優先嘗試 .TW (上市) 與 .TWO (上櫃)，確保 3037 欣興等標的精準定位
     for suffix in [".TW", ".TWO"]:
         ticker_id = f"{clean_id}{suffix}"
-        ticker = yf.Ticker(ticker_id)
         try:
-            # 使用 download 抓取最近兩日數據，確保 2026 年報價不延遲
-            df = yf.download(ticker_id, period="2d", progress=False)
-            if df.empty: continue
+            # 強制抓取「今日」的「分鐘線」數據，確保取得 2026/03/12 當下真實成交價
+            # 這是目前 yfinance 繞過舊快取最精準的方法
+            df = yf.download(ticker_id, period="1d", interval="1m", progress=False, timeout=10)
             
-            # 取得最新成交價與昨收價
-            current_price = float(df['Close'].iloc[-1])
-            prev_close = float(df['Close'].iloc[-2]) if len(df) > 1 else current_price
-            
-            # 獲取 EPS 與 名稱
+            # 獲取個股基本資訊 (EPS 與 名稱)
+            ticker = yf.Ticker(ticker_id)
             info = ticker.info
-            eps = info.get('trailingEps') or info.get('forwardEps')
-            name = info.get('shortName', '台股個股')
+            
+            if df.empty:
+                # 盤前備援：若無分鐘線則抓取日線最後一筆
+                df = yf.download(ticker_id, period="1d", progress=False)
+            
+            if not df.empty:
+                current_price = float(df['Close'].iloc[-1])
+                # 以今日開盤價作為漲跌參考點
+                open_price = float(df['Open'].iloc[0])
+                
+                eps = info.get('trailingEps') or info.get('forwardEps')
+                name = info.get('shortName', '台股個股')
 
-            return {
-                "price": current_price,
-                "prev_close": prev_close,
-                "eps": eps,
-                "tid": ticker_id,
-                "name": name
-            }
+                return {
+                    "price": current_price,
+                    "prev_close": open_price,
+                    "eps": eps,
+                    "tid": ticker_id,
+                    "name": name
+                }
         except:
             continue
     return None
 
 def start_integrated_analysis():
     print(f"{'='*60}")
-    print(f"🚀 全能台股導航 V4.18 | 2026 實時數據引擎啟動")
+    print(f"🚀 全能台股導航 V4.20 | 2026 實時精準數據引擎")
     print(f"{'='*60}")
     
-    # 步驟 1：輸入代號並立即顯示當下股價 (2454 會正確顯示 1700+ 元)
-    STOCK_ID = input("👉 請輸入台股代號 (例如 2454 或 3037): ").strip()
+    # 步驟 1：輸入代號並立即顯示當下精準股價 (解決 3037 報價錯誤問題)
+    STOCK_ID = input("👉 請輸入台股代號 (例如 3037 或 2454): ").strip()
     now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     data = get_stock_data(STOCK_ID)
     
     if not data:
-        print(f"❌ 錯誤：無法連線至數據庫，請確認網路或代號是否正確。")
+        print(f"❌ 錯誤：無法從交易所取得 {STOCK_ID} 之實時報價，請確認代號。")
         return
 
     # 計算漲跌幅
@@ -83,7 +89,7 @@ def start_integrated_analysis():
     print(f"  ● 7. 市場討論(Cmoney)：https://www.cmoney.tw{STOCK_ID}")
     print(f"  🚩 重點：追蹤主力集中度、法人是否連買，並找關鍵分點。")
 
-    # --- 第過部分：營收獲利 (績效成績單) ---
+    # --- 第四部分：營收獲利 (績效成績單) ---
     print(f"\n📈 [ 第四部分：營收獲利 ]")
     print(f"  ● 公開資訊觀測站 ：https://mops.twse.com.tw")
     print(f"  🚩 重點：每月 10 號前觀察營收成長率 (YoY/MoM)。")
@@ -92,14 +98,14 @@ def start_integrated_analysis():
     print(f"\n💎 [ 第五部分：DCF 估值評比 ] (依據近四季 EPS：{data['eps'] if data['eps'] else 'N/A'})")
     if data['eps'] and data['eps'] > 0:
         # 估值公式：EPS * (1+G) * 15(基準PE)
-        scenarios = {"低評比(保守5%)": 0.05, "中評比(中性10%)": 0.10, "高評比(樂觀15%)": 0.15}
+        scenarios = {"低評比(保守 5%)": 0.05, "中評比(中性 10%)": 0.10, "高評比(樂觀 15%)": 0.15}
         for label, g in scenarios.items():
             fair_val = data['eps'] * (1 + g) * 15 
             diff = ((data['price'] - fair_val) / fair_val) * 100
             pos = "偏高" if diff > 0 else "便宜"
             print(f"  ● {label}: {fair_val:>8.2f} 元 (目前{pos} {abs(diff):.1f}%)")
     else:
-        print(f"  ⚠️ 盈餘為負或數據不足，無法進行 DCF 估值運算。")
+        print(f"  ⚠️ 盈餘數據不足，無法進行 DCF 估值。請參考財報狗最新 EPS。")
 
     print("-" * 60)
     print(f"💡 綜合提示：若股價低於「中評比」且「恐懼指數」極低，通常是極佳買點。")
