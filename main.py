@@ -1,7 +1,7 @@
 import datetime
 import yfinance as yf
 
-# --- 核心數據抓取與精準台股識別 ---
+# --- 核心數據抓取與精準台股識別 (確保 3131/3037 必出股價) ---
 def get_stock_data(sid):
     clean_id = "".join(filter(str.isdigit, sid))
     # 優先嘗試 .TW (上市) 與 .TWO (上櫃)，避免跳至日股
@@ -9,38 +9,49 @@ def get_stock_data(sid):
         ticker_id = f"{clean_id}{suffix}"
         ticker = yf.Ticker(ticker_id)
         try:
+            # 獲取資訊
             info = ticker.info
             fast_info = ticker.fast_info
-            if fast_info.last_price > 0:
-                return {
-                    "price": fast_info.last_price,
-                    "prev_close": fast_info.previous_close,
-                    "eps": info.get('trailingEps'),
-                    "tid": ticker_id,
-                    "name": info.get('shortName', '未知名稱')
-                }
+            price = fast_info.last_price
+            
+            # 【備援機制】若 fast_info 為空，則抓取當日最後一筆成交價
+            if price is None or price <= 0:
+                hist = ticker.history(period="1d")
+                if not hist.empty:
+                    price = hist['Close'].iloc[-1]
+                else:
+                    continue
+
+            return {
+                "price": price,
+                "prev_close": fast_info.previous_close if fast_info.previous_close else price,
+                "eps": info.get('trailingEps'),
+                "tid": ticker_id,
+                "name": info.get('shortName', '台股個股')
+            }
         except:
             continue
     return None
 
 def start_integrated_analysis():
     print(f"{'='*60}")
-    print(f"🚀 全能台股導航 V4.12 | 啟動中...")
+    print(f"🚀 全能台股導航 V4.14 | 完整分析引擎啟動")
     print(f"{'='*60}")
     
     # 互動式輸入：直接顯示當下股價
-    STOCK_ID = input("👉 請輸入台股代號 (例如 2330 或 3131): ").strip()
+    STOCK_ID = input("👉 請輸入台股代號 (例如 2330, 3037, 3131): ").strip()
     now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     data = get_stock_data(STOCK_ID)
     
     if not data:
-        print(f"❌ 查無代號 {STOCK_ID} 之即時數據，請確認輸入是否正確。")
+        print(f"❌ 錯誤：查無 {STOCK_ID} 之即時數據，請確認代號是否正確。")
         return
 
-    # 1. 顯示當下即時股價
-    pct = ((data['price'] - data['prev_close']) / data['prev_close']) * 100
-    status = f"{data['price']:.2f} ({'▲' if pct > 0 else '▼' if pct < 0 else '─'} {abs(pct):.2f}%)"
+    # 1. 立即呈現即時股價
+    diff = data['price'] - data['prev_close']
+    pct = (diff / data['prev_close']) * 100 if data['prev_close'] else 0
+    status = f"{data['price']:.2f} ({'▲' if diff > 0 else '▼' if diff < 0 else '─'} {abs(pct):.2f}%)"
     market = "[上市]" if ".TW" in data['tid'] and ".TWO" not in data['tid'] else "[上櫃]"
     
     print(f"\n" + "="*60)
