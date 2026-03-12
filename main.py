@@ -1,39 +1,40 @@
 import datetime
+import requests
 import yfinance as yf
+from bs4 import BeautifulSoup
 
-# --- 核心數據抓取：V4.20 分鐘線精準偵測 (解決報價延遲與錯誤問題) ---
-def get_stock_data(sid):
+# --- 核心數據抓取：Google Finance 實時報價 ---
+def get_google_data(sid):
+    """
+    V4.22 修正版：採用 Google Finance 確保 2026 報價零延遲
+    """
     clean_id = "".join(filter(str.isdigit, sid))
-    # 優先嘗試 .TW (上市) 與 .TWO (上櫃)，確保 3037 欣興等標的精準定位
-    for suffix in [".TW", ".TWO"]:
-        ticker_id = f"{clean_id}{suffix}"
+    # 嘗試上市 (TPE) 與 上櫃 (TWO)
+    for exchange in ["TPE", "TWO"]:
+        url = f"https://www.google.com{clean_id}:{exchange}"
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         try:
-            # 強制抓取「今日」的「分鐘線」數據，確保取得 2026/03/12 當下真實成交價
-            # 這是目前 yfinance 繞過舊快取最精準的方法
-            df = yf.download(ticker_id, period="1d", interval="1m", progress=False, timeout=10)
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code != 200: continue
             
-            # 獲取個股基本資訊 (EPS 與 名稱)
-            ticker = yf.Ticker(ticker_id)
-            info = ticker.info
+            soup = BeautifulSoup(resp.text, "html.parser")
+            # 抓取股價與漲跌幅
+            price_box = soup.find("div", {"class": "YMl6ce"})
+            name_box = soup.find("div", {"class": "zzDe9c"})
+            change_box = soup.find("div", {"class": "Jw7C9b"})
             
-            if df.empty:
-                # 盤前備援：若無分鐘線則抓取日線最後一筆
-                df = yf.download(ticker_id, period="1d", progress=False)
-            
-            if not df.empty:
-                current_price = float(df['Close'].iloc[-1])
-                # 以今日開盤價作為漲跌參考點
-                open_price = float(df['Open'].iloc[0])
+            if price_box:
+                price = float(price_box.text.replace("$", "").replace(",", ""))
+                # 抓取 EPS (藉由 yfinance 輔助，確保 DCF 正常)
+                ticker = yf.Ticker(f"{clean_id}.TW" if exchange=="TPE" else f"{clean_id}.TWO")
+                eps = ticker.info.get('trailingEps') or ticker.info.get('forwardEps')
                 
-                eps = info.get('trailingEps') or info.get('forwardEps')
-                name = info.get('shortName', '台股個股')
-
                 return {
-                    "price": current_price,
-                    "prev_close": open_price,
+                    "price": price,
+                    "status_text": change_box.text if change_box else "N/A",
+                    "name": name_box.text if name_box else "台股個股",
                     "eps": eps,
-                    "tid": ticker_id,
-                    "name": name
+                    "market": "[上市]" if exchange=="TPE" else "[上櫃]"
                 }
         except:
             continue
@@ -41,27 +42,23 @@ def get_stock_data(sid):
 
 def start_integrated_analysis():
     print(f"{'='*60}")
-    print(f"🚀 全能台股導航 V4.20 | 2026 實時精準數據引擎")
+    print(f"🚀 全能台股導航 V4.22 | Google Finance 實時引擎")
     print(f"{'='*60}")
     
-    # 步驟 1：輸入代號並立即顯示當下精準股價 (解決 3037 報價錯誤問題)
     STOCK_ID = input("👉 請輸入台股代號 (例如 3037 或 2454): ").strip()
     now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    data = get_stock_data(STOCK_ID)
+    # 執行數據抓取
+    data = get_google_data(STOCK_ID)
     
     if not data:
-        print(f"❌ 錯誤：無法從交易所取得 {STOCK_ID} 之實時報價，請確認代號。")
+        print(f"❌ 錯誤：無法從交易所取得 {STOCK_ID} 之實時報價。")
         return
 
-    # 計算漲跌幅
-    pct = ((data['price'] - data['prev_close']) / data['prev_close']) * 100
-    status = f"{data['price']:.2f} ({'▲' if pct > 0 else '▼' if pct < 0 else '─'} {abs(pct):.2f}%)"
-    market = "[上市]" if ".TW" in data['tid'] and ".TWO" not in data['tid'] else "[上櫃]"
-    
+    # 1. 顯示當下精準股價
     print(f"\n" + "="*60)
-    print(f"📈 【 監控目標：{STOCK_ID} {data['name']} {market} 】")
-    print(f"💰 今日當下股價：{status}")
+    print(f"📈 【 監控目標：{STOCK_ID} {data['name']} {data['market']} 】")
+    print(f"💰 Google 當下股價：{data['price']:.2f} ({data['status_text']})")
     print(f"⏰ 查詢時間：{now_time}")
     print("="*60)
 
@@ -97,7 +94,6 @@ def start_integrated_analysis():
     # --- 第五部分：DCF 估值評比 (壓軸模型) ---
     print(f"\n💎 [ 第五部分：DCF 估值評比 ] (依據近四季 EPS：{data['eps'] if data['eps'] else 'N/A'})")
     if data['eps'] and data['eps'] > 0:
-        # 估值公式：EPS * (1+G) * 15(基準PE)
         scenarios = {"低評比(保守 5%)": 0.05, "中評比(中性 10%)": 0.10, "高評比(樂觀 15%)": 0.15}
         for label, g in scenarios.items():
             fair_val = data['eps'] * (1 + g) * 15 
