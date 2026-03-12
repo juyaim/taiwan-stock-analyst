@@ -1,54 +1,72 @@
 import datetime
 import requests
-import yfinance as yf
+import json
 
-def get_real_stock_data(sid):
+def get_verified_official_data(sid):
     """
-    修正版：精確抓取台股名稱與報價，防止代號混淆
+    V4.46：修正 URL 格式與資料類型錯誤，直連官方伺服器
     """
     clean_id = sid.strip()
-    # 嘗試上市與上櫃後綴
-    for suffix in [".TW", ".TWO"]:
-        try:
-            ticker = yf.Ticker(f"{clean_id}{suffix}")
-            info = ticker.info
-            # 確保有抓到價格才視為成功
-            if info.get('currentPrice') or info.get('regularMarketPrice'):
-                return {
-                    "price": info.get('currentPrice') or info.get('regularMarketPrice'),
-                    "prev_close": info.get('regularMarketPreviousClose'),
-                    "name": info.get('shortName', '未知'),
-                    "eps": info.get('trailingEps') or info.get('forwardEps') or 0,
-                    "tid": clean_id,
-                    "market": "上市" if suffix == ".TW" else "上櫃",
-                    "date": datetime.date.today().strftime("%Y-%m-%d")
-                }
-        except:
-            continue
-    return None
+    now_ts = int(datetime.datetime.now().timestamp() * 1000)
+    
+    # 正確的官方 API 路徑 (一次查詢上市與上櫃)
+    api_url = f"https://mis.twse.com.tw_{clean_id}.tw|otc_{clean_id}.tw&_={now_ts}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    
+    try:
+        resp = requests.get(api_url, headers=headers, timeout=5)
+        res_json = resp.json()
+        
+        if not res_json.get('msgArray'):
+            return None
+
+        info = res_json['msgArray'][0]
+        
+        # 處理官方 API 的 '-' 符號問題 (若無當前成交價 z，則抓昨收 y)
+        raw_z = info.get('z', '-')
+        raw_y = info.get('y', '0')
+        
+        current_price = float(raw_z) if raw_z != '-' else float(raw_y)
+        prev_close = float(raw_y)
+        stock_name = info.get('n', '未知')
+        market_type = "[上市]" if info.get('ex') == 'tse' else "[上櫃]"
+
+        return {
+            "price": current_price,
+            "prev_close": prev_close,
+            "name": stock_name,
+            "tid": clean_id,
+            "market": market_type,
+            "date": datetime.date.today().strftime("%Y-%m-%d"),
+            "eps": 0.0 # 官方報價 API 不含 EPS，此處預設為 0
+        }
+    except Exception as e:
+        print(f"Debug: API 擷取失敗 - {e}")
+        return None
 
 def start_integrated_analysis():
     print(f"{'='*60}")
-    print(f"🚀 全能台股導航 V4.44 | 修正截圖錯誤、拒絕胡言亂語版")
+    print(f"🚀 全能台股導航 V4.46 | 官方直連校準版")
     print(f"{'='*60}")
     
-    STOCK_ID = input("👉 請輸入台股代號 (如 7769, 2330): ").strip()
+    STOCK_ID = input("👉 請輸入台股代號: ").strip()
     now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    data = get_real_stock_data(STOCK_ID)
+    # 呼叫正確的函數
+    data = get_verified_official_data(STOCK_ID)
     
     if not data:
-        print(f"❌ 錯誤：找不到代號 {STOCK_ID} 的資料，請確認輸入是否有誤。")
+        print(f"❌ 錯誤：找不到代號 {STOCK_ID} 的官方資料。")
         return
 
-    # 1. 報價呈現 (精確呈現，不模擬假數據)
+    # 1. 報價呈現
     diff = data['price'] - data['prev_close']
-    pct = (diff / data['prev_close']) * 100
+    pct = (diff / data['prev_close']) * 100 if data['prev_close'] != 0 else 0
     status = f"{data['price']:,.2f} ({'▲' if diff > 0 else '▼' if diff < 0 else '─'} {abs(pct):.2f}%)"
     
     print(f"\n" + "="*60)
-    print(f"📈 【 監控目標：{data['tid']} {data['name']} [{data['market']}] 】")
-    print(f"💰 最新成交價：{status}")
+    print(f"📈 【 監控目標：{data['tid']} {data['name']} {data['market']} 】")
+    print(f"💰 官方最新成交價：{status}")
     print(f"📅 數據基準日期：{data['date']}")
     print(f"⏰ 分析執行時間：{now_time}")
     print("="*60)
@@ -57,15 +75,13 @@ def start_integrated_analysis():
     print(f"📊 [ 第一部分：宏觀環境 ]")
     print(f"  ● 國發會_景氣燈號：https://index.ndc.gov.tw")
     print(f"  ● M平方_全球總經  ：https://www.macromicro.me")
-    print(f"  🚩 評價：觀察紅藍燈切換，判斷長線進場點。")
 
     # --- 第二部分：市場情緒 (堅持不縮水) ---
     print(f"\n🕵️ [ 第二部分：市場情緒 ]")
     print(f"  ● 恐懼與貪婪指數  ：https://www.wantgoo.com")
     print(f"  ● 期交所_大戶未平倉：https://www.taifex.com.tw")
-    print(f"  ● 證交所_借券空單  ：https://www.twse.com.tw")
 
-    # --- 第三部分：個股深度分析 (堅持不縮水，連結精準化) ---
+    # --- 第三部分：個股深度分析 (連結路徑修正) ---
     print(f"\n🔍 [ 第三部分：個股深度分析 ]")
     print(f"  ● 1. 技術分析      ：https://www.wantgoo.com{STOCK_ID}")
     print(f"  ● 2. 籌碼/持股比例 ：https://goodinfo.tw{STOCK_ID}")
