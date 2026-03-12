@@ -13,7 +13,7 @@ def get_stock_data(sid):
             df = yf.download(ticker_id, period="2d", progress=False)
             if df.empty: continue
             
-            # 取得最新成交價與漲跌數據
+            # 取得最新成交價與昨收價
             current_price = float(df['Close'].iloc[-1])
             prev_close = float(df['Close'].iloc[-2]) if len(df) > 1 else current_price
             
@@ -35,10 +35,10 @@ def get_stock_data(sid):
 
 def start_integrated_analysis():
     print(f"{'='*60}")
-    print(f"🚀 全能台股導航 V4.17 | 2026 實時數據引擎啟動")
+    print(f"🚀 全能台股導航 V4.18 | 2026 實時數據引擎啟動")
     print(f"{'='*60}")
     
-    # 步驟 1：輸入代號並立即顯示股價 (解決 3037, 2454 報價問題)
+    # 步驟 1：輸入代號並立即顯示當下股價 (2454 會正確顯示 1700+ 元)
     STOCK_ID = input("👉 請輸入台股代號 (例如 2454 或 3037): ").strip()
     now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
@@ -83,7 +83,7 @@ def start_integrated_analysis():
     print(f"  ● 7. 市場討論(Cmoney)：https://www.cmoney.tw{STOCK_ID}")
     print(f"  🚩 重點：追蹤主力集中度、法人是否連買，並找關鍵分點。")
 
-    # --- 第四部分：營收獲利 (績效成績單) ---
+    # --- 第過部分：營收獲利 (績效成績單) ---
     print(f"\n📈 [ 第四部分：營收獲利 ]")
     print(f"  ● 公開資訊觀測站 ：https://mops.twse.com.tw")
     print(f"  🚩 重點：每月 10 號前觀察營收成長率 (YoY/MoM)。")
