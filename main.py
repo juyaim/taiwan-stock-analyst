@@ -4,16 +4,16 @@ import yfinance as yf
 # --- 核心數據抓取：強制抓取最新完整交易日 (T-1) 收盤價，確保數據絕對精準 ---
 def get_stable_stock_data(sid):
     """
-    V4.26 穩定修復：
+    V4.29 核心校準：
     1. 採用 yf.download 抓取日線數據，取最近一個完整交易日的 Close (收盤價)。
-    2. 確保數據穩定，不因盤中 API 延遲而報錯股價。
+    2. 確保在 2026/03/12 看到的報價是絕對精準的基準價，解決盤中跳針問題。
     """
     clean_id = sid.strip()
     # 自動偵測上市 (.TW) 或上櫃 (.TWO)
     for suffix in [".TW", ".TWO"]:
         tid = f"{clean_id}{suffix}"
         try:
-            # 抓取最近 5 天歷史日線，確保一定有資料
+            # 抓取最近 5 天歷史日線，確保數據穩定
             df = yf.download(tid, period="5d", progress=False)
             if df.empty: continue
             
@@ -42,11 +42,11 @@ def get_stable_stock_data(sid):
 
 def start_integrated_analysis():
     print(f"{'='*60}")
-    print(f"🚀 全能台股導航 V4.26 | 基準數據穩定引擎 (不縮水版)")
+    print(f"🚀 全能台股導航 V4.29 | 八大公股與籌碼集中強化版 (不縮水)")
     print(f"{'='*60}")
     
     # 步驟 1：輸入代號並取得數據
-    STOCK_ID = input("👉 請輸入台股代號 (例如 2317 或 3037): ").strip()
+    STOCK_ID = input("👉 請輸入台股代號 (例如 2330 或 2317): ").strip()
     now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     data = get_stable_stock_data(STOCK_ID)
@@ -55,7 +55,7 @@ def start_integrated_analysis():
         print(f"❌ 錯誤：無法取得 {STOCK_ID} 數據，請確認代號或網路連線。")
         return
 
-    # 計算漲跌
+    # 計算漲跌幅
     diff = data['price'] - data['prev_close']
     pct = (diff / data['prev_close']) * 100
     status = f"{data['price']:.2f} ({'▲' if diff > 0 else '▼' if diff < 0 else '─'} {abs(pct):.2f}%)"
@@ -78,18 +78,20 @@ def start_integrated_analysis():
     print(f"  ● 恐懼與貪婪指數  ：https://www.wantgoo.com")
     print(f"  ● 期交所_大戶未平倉：https://www.taifex.com.tw")
     print(f"  ● 證交所_借券空單  ：https://www.twse.com.tw")
-    print(f"  🚩 重點：指數 < 25 (極度恐懼) 常是反向買點；觀察空單是否過高增加壓力。")
+    print(f"  🚩 重點：指數 < 25 (極度恐懼) 常是反向買點。")
 
-    # --- 第三部分：個股深度分析 (不縮水) ---
+    # --- 第三部分：個股深度分析 (新增八大公股動向) ---
     print(f"\n🔍 [ 第三部分：個股深度分析 ]")
     print(f"  ● 1. 技術分析     ：https://www.wantgoo.com{STOCK_ID}")
     print(f"  ● 2. 籌碼/持股比例：https://goodinfo.tw{STOCK_ID}")
     print(f"  ● 3. 三大法人進出 ：https://goodinfo.tw{STOCK_ID}")
-    print(f"  ● 4. 主力集中度趨勢：https://www.wantgoo.com{STOCK_ID}/major-investors/main-trend")
-    print(f"  ● 5. 分點買賣排行 ：https://www.wantgoo.com{STOCK_ID}/major-investors/main-broker")
-    print(f"  ● 6. 基本面(財報狗)：https://statementdog.com{STOCK_ID}")
-    print(f"  ● 7. 市場討論(Cmoney)：https://www.cmoney.tw{STOCK_ID}")
-    print(f"  🚩 重點：追蹤主力集中度、法人是否連買，並找關鍵分點。")
+    print(f"  ● 4. 🏛️八大公股銀行 ：https://www.wantgoo.compublic-bank/buy-sell?stockno={STOCK_ID}")
+    print(f"  ● 5. 💎大戶籌碼集中度：https://www.wantgoo.com{STOCK_ID}/major-investors/concentration")
+    print(f"  ● 6. ⚠️家數差指標    ：https://www.wantgoo.com{STOCK_ID}/major-investors/main-trend")
+    print(f"  ● 7. 分點買賣排行 ：https://www.wantgoo.com{STOCK_ID}/major-investors/main-broker")
+    print(f"  ● 8. 基本面(財報狗)：https://statementdog.com{STOCK_ID}")
+    print(f"  ● 9. 市場討論(Cmoney)：https://www.cmoney.tw{STOCK_ID}")
+    print(f"  🚩 重點：觀察「八大公股」是否逆勢護盤；集中度增加代表貨流向大批發商。")
 
     # --- 第四部分：營收獲利 (不縮水) ---
     print(f"\n📈 [ 第四部分：營收獲利 ]")
@@ -109,7 +111,7 @@ def start_integrated_analysis():
         print(f"  ⚠️ 盈餘數據不足，無法進行 DCF 估值運算。")
 
     print("-" * 60)
-    print(f"💡 提示：本報價採用最近一個交易日之收盤價，數據最為穩定精準。")
+    print(f"💡 提示：若「公股行庫」與「家數差連負」同時發生，即是國家大戶正在護盤的強力買訊。")
     print("="*60)
 
 if __name__ == "__main__":
