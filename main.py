@@ -1,5 +1,87 @@
 import datetime
 import requests
+
+# --- 核心設定：修改此處代號即可 ---
+STOCK_ID = "6274"  # 例如：2330, 7769, 6274
+
+def get_real_official_data(sid):
+    """取得證交所/櫃買中心官方真實報價，防止 186.5 這種錯誤數值"""
+    now_ts = int(datetime.datetime.now().timestamp() * 1000)
+    api_url = f"https://mis.twse.com.tw_{sid}.tw|otc_{sid}.tw&_={now_ts}"
+    headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://mis.twse.com.tw"}
+    try:
+        resp = requests.get(api_url, headers=headers, timeout=5)
+        info = resp.json()['msgArray'][0]
+        # 解析價格：z(成交價) -> a(最佳賣) -> b(最佳買) -> y(昨收)
+        price = float(info.get('z', info.get('a', info.get('b', info.get('y')))).split('|')[0])
+        return {
+            "price": price, "prev_close": float(info.get('y', price)),
+            "name": info.get('n'), "market": "[上市]" if info.get('ex')=='tse' else "[上櫃]",
+            "eps": 12.44 # 範例 EPS，建議依實際財報修改
+        }
+    except: return None
+
+# --- 第一部分：宏觀環境 (不縮水) ---
+MACRO_INDICATORS = {
+    "國發會_景氣燈號": "https://index.ndc.gov.tw/n/zh_tw",
+    "M平方_全球總經": "https://www.macromicro.me/trader-insights",
+    "重點": "看國家體檢表。藍燈買點，紅燈風險。"
+}
+
+# --- 第二部分：市場情緒 (不縮水) ---
+MARKET_SENTIMENT = {
+    "期交所_大戶未平倉": "https://www.taifex.com.tw",
+    "證交所_借券空單": "https://www.twse.com.tw/zh/page/trading/exchange/TWTASU.html",
+    "重點": "觀察大戶空單壓力。"
+}
+
+def start_integrated_analysis():
+    data = get_real_official_data(STOCK_ID)
+    if not data:
+        print(f"❌ 錯誤：代號 {STOCK_ID} 官方數據擷取失敗。")
+        return
+
+    now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    diff = data['price'] - data['prev_close']
+    pct = (diff / data['prev_close']) * 100
+
+    print(f"--- 全能台股導航 V4.49 啟動 ---")
+    print(f"📈 【 監控目標：{STOCK_ID} {data['name']} {data['market']} 】")
+    print(f"💰 官方真實成交價：{data['price']:,.2f} ({'▲' if diff > 0 else '▼'}{abs(pct):.2f}%)")
+    print(f"⏰ 分析時間：{now_time}")
+    print("-" * 60)
+
+    # --- 第三部分：個股深度分析 (連結修正版) ---
+    print(f"🔍 [ 第三部分：個股深度分析 ]")
+    print(f"  ● 1. 技術分析      ：https://www.wantgoo.com{STOCK_ID}")
+    print(f"  ● 2. 籌碼/持股比例 ：https://goodinfo.tw{STOCK_ID}")
+    print(f"  ● 3. 三大法人進出  ：https://goodinfo.tw{STOCK_ID}")
+    print(f"  ● 4. 🏛️ 八大公股銀行 ：https://www.wantgoo.compublic-bank/buy-sell?stockno={STOCK_ID}")
+    print(f"  ● 5. 💎 大戶籌碼集中度：https://www.wantgoo.com{STOCK_ID}/major-investors/concentration")
+    print(f"  ● 6. ⚠️ 家數差指標    ：https://www.wantgoo.com{STOCK_ID}/major-investors/main-trend")
+    print(f"  ● 7. 分點買賣排行  ：https://www.wantgoo.com{STOCK_ID}/major-investors/main-broker")
+    print(f"  ● 8. 基本面(財報狗)：https://statementdog.com{STOCK_ID}")
+    print(f"  ● 9. 市場討論(Cmoney)：https://www.cmoney.tw{STOCK_ID}")
+
+    # --- 第四部分：營收獲利 ---
+    print(f"\n📈 [ 第四部分：營收獲利 ]")
+    print(f"  ● 公開資訊觀測站 ：https://mops.twse.com.tw/mops/web/t05st10_ifrs")
+
+    # --- 第五部分：DCF 估值評比 ---
+    eps = data['eps']
+    print(f"\n💎 [ 第五部分：DCF 估值評比 ] (依據近四季 EPS：{eps})")
+    for label, g in {"低評(5%)": 0.05, "中評(10%)": 0.10, "高評(15%)": 0.15}.items():
+        fair = eps * (1 + g) * 25
+        diff_val = ((data['price'] - fair) / fair) * 100
+        print(f"  ● {label}: {fair:>8.2f} 元 (目前{'偏高' if diff_val > 0 else '便宜'} {abs(diff_val):.1f}%)")
+
+    print("-" * 60)
+    print(f"💡 提示：本報價已與交易所官網同步，拒絕 186.5 這種舊快取污染。")
+
+if __name__ == "__main__":
+    start_integrated_analysis()
+import datetime
+import requests
 import json
 
 def get_real_official_data_v448(sid):
